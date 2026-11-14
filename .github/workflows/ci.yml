@@ -1,6 +1,6 @@
 name: CI
 
-# PR 和推送到 main：验证安装器、更新器及各发行版构建，安装包保存在 Artifacts。
+# PR 和推送到 main：验证安装器、更新器及 Linux 各发行版构建，安装包保存在 Artifacts。
 # 只改了文档（*.md、docs/、截图）的提交不跑。
 # 推送 v* 标签（git tag v0.1.0 && git push origin v0.1.0）：总是跑，并把这些包发到 GitHub Release。
 # 其他分支想跑一次：Actions 页手动运行（workflow_dispatch）。
@@ -42,7 +42,7 @@ jobs:
       - run: bash scripts/test-install.sh
       - run: python3 scripts/test-update.py
       - run: python3 scripts/test-shift-config.py
-      # 设置契约：spec/ 自检 + 设置界面对照（fcitx5 插件在「插件」任务的 addon-test.sh 里对照，macOS 在 macos/test.sh 里）
+      # 设置契约：spec/ 自检 + 设置界面对照（fcitx5 插件在「插件」任务的 addon-test.sh 里对照）
       - run: python3 scripts/test-config-contract.py
 
   core:
@@ -59,95 +59,6 @@ jobs:
       - run: cargo test --workspace --locked
       - name: C ABI 冒烟测试
         run: ./scripts/abi-smoke.sh
-
-  core-macos:
-    # 核心和 C 接口在 macOS 上一直能编、能过测试。不在 release 的 needs 里，挂了不挡 Linux 发版。
-    name: Rust 核心测试（macOS）
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v4
-      - run: rustup toolchain install stable --profile minimal && rustup default stable
-      - uses: Swatinem/rust-cache@v2
-      - run: cargo test --workspace --locked
-      - name: C ABI 冒烟测试
-        run: ./scripts/abi-smoke.sh
-
-  macos-app:
-    # macOS 输入法外壳（macos/）：按键测试、打通用安装包、用安装包里的词库自检、真装一遍 pkg。
-    # 发版时 WowType-<版本>-macos.pkg 跟 Linux 的包一起进 Release（artifact 叫 pkg-macos）。
-    name: macOS 输入法
-    needs: data
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v4
-      - run: |
-          rustup toolchain install stable --profile minimal && rustup default stable
-          rustup target add aarch64-apple-darwin x86_64-apple-darwin
-      - uses: Swatinem/rust-cache@v2
-      - uses: actions/download-artifact@v4
-        with:
-          name: data
-          path: dist/data
-      - name: 按键测试和设置契约（小词库 + 真实词库）
-        run: |
-          macos/test.sh
-          WOWTYPE_EXPECT_FULL_CHARS=1 macos/test.sh dist/data/lexicon.tsv dist/data/english.txt
-      - name: 核心静态库要链接的系统库（对照 build.sh 的链接参数）
-        run: |
-          cargo rustc --release -q -p wowtype-core --no-default-features --lib --crate-type staticlib \
-            --target-dir target/macos-libs -- --print native-static-libs 2>&1 | grep native-static-libs || true
-      - name: 打包
-        # 发版时版本号跟 tag 走（和 Linux 的包一样），一键安装脚本按 tag 找 WowType-<版本>-macos.pkg
-        run: |
-          if [ "${GITHUB_REF_TYPE}" = tag ]; then export WOWTYPE_VERSION=${GITHUB_REF_NAME#v}; fi
-          macos/build.sh dist/data dist/macos
-      - name: 检查安装包
-        run: |
-          app=dist/macos/WowType.app
-          bin=$app/Contents/MacOS/WowType
-          plutil -lint "$app/Contents/Info.plist"
-          lipo "$bin" -verify_arch arm64 x86_64
-          otool -L "$bin"
-          # 只能链接系统自带的库
-          # 通用二进制每个架构有一行「…(architecture arm64):」标题，跳过
-          if otool -L "$bin" | grep -v ':$' | grep -Ev '^\s+(/System/Library/|/usr/lib/)'; then
-            echo "链接了系统以外的库"; exit 1
-          fi
-          codesign --verify --strict "$app"
-          unzip -l dist/macos/*.zip
-          if unzip -l dist/macos/*.zip | grep -Ei 'wtlocal|nnlm|gguf|HY-MT|wetype'; then
-            echo "安装包里有不能分发的模型"; exit 1
-          fi
-      - name: 自检（载入安装包里的词库打 nihao）
-        run: WOWTYPE_DATA_DIR="$RUNNER_TEMP/wowtype-data" dist/macos/WowType.app/Contents/MacOS/WowType --selftest
-      - name: 自检以后安装包没被改过（词库快照要写在数据目录，不能写进签过名的安装包）
-        run: codesign --verify --strict dist/macos/WowType.app
-      - name: 装一遍 pkg（只装给当前用户，不用 sudo）
-        run: |
-          pkg=$(ls dist/macos/WowType-*-macos.pkg)
-          pkgutil --payload-files "$pkg" | grep -qx './WowType.app/Contents/MacOS/WowType'
-          if pkgutil --payload-files "$pkg" | grep -Ei 'wtlocal|nnlm|gguf|HY-MT|wetype'; then
-            echo "pkg 里有不能分发的模型"; exit 1
-          fi
-          # 模拟从网上下载：带上隔离标记。安装器装出来的文件不能带，不然输入法跑不起来
-          xattr -w com.apple.quarantine "0083;00000000;Safari;" "$pkg"
-          installer -pkg "$pkg" -target CurrentUserHomeDirectory
-          app="$HOME/Library/Input Methods/WowType.app"
-          codesign --verify --strict "$app"
-          if xattr -r "$app" | grep -q com.apple.quarantine; then echo "装出来的文件带隔离标记"; exit 1; fi
-          [[ -O "$app/Contents/MacOS/WowType" ]] || { echo "装出来的文件不归当前用户"; exit 1; }
-          "$app/Contents/MacOS/WowType" --version
-          xattr -d com.apple.quarantine "$pkg"
-      - uses: actions/upload-artifact@v4
-        with:
-          # 叫 pkg-*：发版任务按 pkg-* 收安装包
-          name: pkg-macos
-          path: dist/macos/*.pkg
-      - uses: actions/upload-artifact@v4
-        with:
-          # zip 给 macos/install.sh 用（开发、测试），不进 Release
-          name: macos-zip
-          path: dist/macos/*.zip
 
   data:
     name: 词库（rime-ice）
@@ -497,7 +408,7 @@ jobs:
   release:
     name: 发布
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [installer, core, data, data-wanxiang, addon, arch, fedora, nix, macos-app]
+    needs: [installer, core, data, data-wanxiang, addon, arch, fedora, nix]
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -532,16 +443,6 @@ jobs:
           Manjaro：按安装说明在本机用 makepkg 打包；openSUSE Tumbleweed：按安装说明从源码构建。
           NixOS（x86_64、aarch64）：flake 输入写 \`github:${GITHUB_REPOSITORY}/release\`（跟正式版）或 \`github:${GITHUB_REPOSITORY}/${GITHUB_REF_NAME}\`（锁这一版），把 \`inputs.wowtype.packages.<system>.default\` 加进 \`i18n.inputMethod.fcitx5.addons\`，见[安装说明](https://github.com/${GITHUB_REPOSITORY}/blob/main/docs/INSTALL.md#nixos--nix)。
           完整步骤见 [README](https://github.com/${GITHUB_REPOSITORY}#安装)。
-
-          ## 安装（macOS 12 以上，Apple 芯片和 Intel）
-
-          在「终端」里运行同一行命令（推荐）：下载 \`WowType-${GITHUB_REF_NAME#v}-macos.pkg\`、校验后只装给当前用户，不要管理员密码，也不用到「隐私与安全性」里放行，装完自动切到 WowType。
-
-          \`\`\`bash
-          curl -fsSL https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/main/install.sh | bash
-          \`\`\`
-
-          或者下载 \`WowType-${GITHUB_REF_NAME#v}-macos.pkg\` 双击安装。安装包没有 Apple 开发者签名：第一次打开时系统会说无法验证，点「完成」，再到「系统设置 → 隐私与安全性」往下找到 WowType，点「仍要打开」。
 
           安装包里的词库来自 [rime-ice](https://github.com/iDvel/rime-ice)（GPL-3.0），词级语言模型 words.lm 是 CC BY-SA 4.0。
 
