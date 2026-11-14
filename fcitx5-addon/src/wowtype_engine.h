@@ -233,7 +233,7 @@ FCITX_CONFIGURATION(
 
 /// 把 wowtype.conf 读成的 RawConfig 装进 config，文件里没写的项是默认值（和 fcitx::readAsIni 一样）。
 /// 0.3.10 及以前没有 TranslateLocal：文件里没写这一项、TranslateBaseUrl 又填了的，接着用翻译接口（False）。
-/// 这条规矩三端一样（settings/wowtype-config 的 read_config、macOS 的 WowtypeConfig.parse）。
+/// 这条规矩由插件和 settings/wowtype-config 的 read_config 共同遵守。
 /// 数字项超出范围时夹到边上（三端一样，见 spec/config.json 的 readRules.outOfRange）。
 /// fcitx5 自己的 IntConstrain 是不认、回到默认值；认不出的数字（abc、空的）还是默认值。
 inline void clampWowtypeInt(fcitx::Option<int, fcitx::IntConstrain> &option, const fcitx::RawConfig &raw,

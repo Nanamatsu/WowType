@@ -261,11 +261,6 @@ WowType 能读它来给整句候选重排（日常整句的首选命中率从约
 - **切换**：「WowType 设置 → 输入 → 词库」里选「万象拼音」，第一次会下载（约 20 MB，对照 `SHA256SUMS` 校验），装到 `~/.local/share/wowtype/dicts/wanxiang/`，几秒后生效，不用重启 fcitx5。选回「雾凇拼音」就切回去，万象的文件可以在同一个地方删掉。
   没网时可以用「从文件安装」选手动下载的 `.tar.gz`。
 - **命令行**：`wowtype-config --install-lexicon wanxiang`（下载并切过去，也接受本地 `.tar.gz` 路径），`wowtype-config --use-lexicon rime-ice` 切回默认。
-- **macOS**：设置窗口「输入 → 词库」里一样有「万象拼音」（下载、更新、从文件安装、不用时删除），装到
-  `~/Library/Application Support/WowType/dicts/wanxiang/`。命令行是
-  `"~/Library/Input Methods/WowType.app/Contents/MacOS/WowType" --install-lexicon wanxiang`（或 `.tar.gz` 路径）、
-  `--use-lexicon rime-ice|wanxiang`。包里只许有哪几个文件、少于多少条不装、怎么校验，和 Linux 的规矩一样
-  （`macos/Sources/Shared/LexiconPack.swift`）。
 - **代价**：多占约 300 MB 内存，第一次载入（建快照）慢一些，之后启动约 2 秒。
 - 只用了万象的词条，没有用它的 `.gram` 语法模型（那是 librime 专用的格式）；整句仍靠 WowType 自己的 `words.lm`。
   万象故意收的错音错字词库（`dicts/cuoyin`，如「秘鲁 mì lǔ」）没收，因为 WowType 没有在候选旁提示正确读音的功能。

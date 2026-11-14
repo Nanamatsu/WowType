@@ -1,4 +1,4 @@
-//! 麦克风采集（cpal），跨平台：Linux 走 ALSA/PulseAudio，macOS 走 CoreAudio。
+//! 麦克风采集（cpal），Linux 通过 ALSA/PulseAudio 接入音频设备。
 //!
 //! 回调里直接把设备格式转成 16kHz 单声道 i16 再吐出去，上层不用关心采样格式。
 

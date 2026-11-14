@@ -71,21 +71,19 @@ fn verify(path: &Path) -> Result<()> {
     Ok(())
 }
 
-/// 优先 `md5sum`（Linux），退回 `md5 -q`（macOS）。
+/// Calculate the model checksum with the Linux `md5sum` utility.
 fn md5(path: &Path) -> Result<String> {
-    for (cmd, args) in [("md5sum", &[][..]), ("md5", &["-q"][..])] {
-        if let Ok(out) = Command::new(cmd).args(args).arg(path).output() {
-            if out.status.success() {
-                let text = String::from_utf8_lossy(&out.stdout);
-                if let Some(first) = text.split_whitespace().next() {
-                    if first.len() == 32 {
-                        return Ok(first.to_string());
-                    }
+    if let Ok(out) = Command::new("md5sum").arg(path).output() {
+        if out.status.success() {
+            let text = String::from_utf8_lossy(&out.stdout);
+            if let Some(first) = text.split_whitespace().next() {
+                if first.len() == 32 {
+                    return Ok(first.to_string());
                 }
             }
         }
     }
-    bail!("找不到 md5 工具（md5sum 或 md5）")
+    bail!("找不到 md5sum 工具")
 }
 
 #[cfg(test)]

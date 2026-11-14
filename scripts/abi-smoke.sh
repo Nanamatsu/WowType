@@ -18,12 +18,7 @@ fi
 
 INCLUDE=core/include
 LIBDIR=target/release
-case "$(uname -s)" in
-  Darwin) LIB=libwowtype_core.dylib; RUNENV="DYLD_LIBRARY_PATH=$LIBDIR" ;;
-  *)      LIB=libwowtype_core.so;    RUNENV="LD_LIBRARY_PATH=$LIBDIR" ;;
-esac
-
 # 库要放在源文件后面：Ubuntu 默认 --as-needed，放前面会被丢掉
 cc -O2 -I"$INCLUDE" -o /tmp/wowtype_abi_smoke tools/abi_smoke.c -L"$LIBDIR" -lwowtype_core
 S2T="$PWD/core/data/s2t.tsv"
-env $RUNENV /tmp/wowtype_abi_smoke "$LEXICON" "$BIGRAM" "$S2T"
+LD_LIBRARY_PATH="$LIBDIR" /tmp/wowtype_abi_smoke "$LEXICON" "$BIGRAM" "$S2T"

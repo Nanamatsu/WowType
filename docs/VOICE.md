@@ -29,12 +29,12 @@
 
 ## 2. 热键方案
 
-默认键位（对齐 VoiceKey 的右 ⌥ / 右 ⌘）：
+默认键位：
 
-| 动作 | macOS（参考） | Linux 建议 |
-|---|---|---|
-| 长按说话 | 右 Option | `Alt_R` |
-| 点按说话 | 右 Command | `Ctrl_R` |
+| 动作 | Linux 建议 |
+|---|---|
+| 长按说话 | `Alt_R` |
+| 点按说话 | `Ctrl_R` |
 
 单个修饰键同时承担长按与点按：快按快松为点按，按住 >300ms 为长按。
 
@@ -55,7 +55,7 @@ Wayland 下"抢一个键"本质上不被允许（安全模型），所以要么�
 ### 微信离线（wtlocal，纯 Rust）
 
 `voice/src/wtlocal/` 直接加载微信输入法的离线模型包并自己推理，**不需要官方程序**，
-全平台可用（无系统依赖）。模型约 100MB，从腾讯 CDN 下载并校验大小和 MD5，**由用户在设置里明确下载**
+模型约 100MB，从腾讯 CDN 下载并校验大小和 MD5，**由用户在设置里明确下载**
 （`WowType 设置 → 语音 → 下载`，或 `wowtype-config --install-voice-model`），输入法插件自己从不下载。
 下载、校验、解包在 `settings/wowtype-config`（Python 标准库 `zipfile`，不用系统 `unzip`）；地址、大小、MD5 和
 `voice/src/wtlocal/pack.rs` 一致，`voice` 里有个测试核对这三个值。
@@ -67,7 +67,7 @@ wowtype-voiced --asr wtlocal          # 没有模型时会下载
 wowtype-asr --download 音频.wav        # 或直接转写一个 WAV（16kHz 单声道）
 ```
 
-实测（macOS TTS 合成语音，5 句全部正确）：
+用合成语音样例测试，5 句全部正确：
 
 | 原文 | 识别 |
 |---|---|
@@ -163,7 +163,7 @@ let cap = capture::start(None, move |pcm: Vec<i16>| { /* 16kHz 单声道 */ })?;
 - 优先直接以 16kHz 单声道打开设备（PipeWire / PulseAudio 自己重采样，质量更好）；
   设备不支持时用默认格式，内部降混、低通滤波再重采样到 16kHz
 - 支持 f32 / i16 / u16 三种采样格式
-- 跨平台：Linux 走 ALSA/PulseAudio，macOS 走 CoreAudio（所以能在 macOS 上编译验证）
+- Linux 通过 ALSA/PulseAudio 采集音频。
 - `capture::list_devices()` 枚举设备
 
 ### 识别后端
@@ -221,6 +221,6 @@ wowtype-voiced --asr-cmd 'sherpa-onnx-offline --tokens=tokens.txt --paraformer=m
 | 热键状态机 | ✅ 已测 | 长按/点按/静音超时/二次点按/自动重复，9 个用例 |
 | 上屏后端 | ✅ 已测（逻辑） | 剪贴板写入用真实子进程验证；实际按键注入未测 |
 | cpal 采集 | ✅ Linux 验过 | ALSA 默认设备（走 PipeWire），约 30ms 打开 |
-| X11 全局热键 | ❌ 未验证 | `#[cfg(target_os = "linux")]`，这台机器上不会被编译 |
+| X11 全局热键 | ❌ 未验证 | `#[cfg(target_os = "linux")]` |
 | fcitx5 插件：热键→识别→上屏 | ✅ 已测 | 私有 fcitx5 实例 + WAV 代替麦克风，按下到上屏 1.6 秒（含载入模型） |
 | 真人对着麦克风说 | ⏳ 待用户试 | 麦克风采集和识别都单独验过 |

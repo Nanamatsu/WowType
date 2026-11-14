@@ -95,7 +95,7 @@ LEXICON_CANDIDATES = [
     "/usr/share/wowtype/lexicon.tsv",
 ]
 
-# 键名、默认值、范围、下面各选项列表以 spec/config.json 为准（设置契约，插件和 macOS 也对照它）；
+# 键名、默认值、范围、下面各选项列表以 spec/config.json 为准（设置契约，插件也对照它）；
 # 改这些要先改规格，scripts/test-config-contract.py 对照
 DEFAULTS = {
     "CandidateLayout": "Horizontal",
@@ -233,7 +233,7 @@ SHIFT_TOGGLES = [
     ("不用 Shift 切换", "Off"),
 ]
 
-# 枚举项认哪些写法（区分大小写，认不出的读成默认值，和插件、macOS 一样，见 spec/config.json）
+# 枚举项认哪些写法（区分大小写，认不出的读成默认值，和插件一样，见 spec/config.json）
 ENUMS = {
     "CandidateLayout": ("Horizontal", "Vertical"),
     "ShuangpinScheme": tuple(value for _label, value in SHUANGPIN_SCHEMES),
@@ -3049,7 +3049,7 @@ class SettingsWindow(Adw.ApplicationWindow):
         look.add(self.font_row)
         page.add(look)
 
-        # 帮助：小技巧折起来；macOS 设置窗口的「帮助」和这里一样（打开数据目录代替导出日志）
+        # 帮助：小技巧折起来（打开数据目录代替导出日志）
         help_group = Adw.PreferencesGroup(title="帮助")
         tips = Adw.ExpanderRow(title="小技巧")
         for title, subtitle in (
@@ -3114,7 +3114,7 @@ class SettingsWindow(Adw.ApplicationWindow):
         self.wanxiang_row.add_suffix(self.lexicon_delete)
         group.add(self.wanxiang_row)
 
-        # wowtype.conf 的 Lexicon 指向别的词库文件时才显示（这里不能选文件，和 macOS 的「自定义词库」同名）
+        # wowtype.conf 的 Lexicon 指向别的词库文件时才显示（这里不能选文件）
         self.custom_lexicon_row = Adw.ActionRow(title="自定义词库", visible=False)
         self.custom_lexicon_row.add_prefix(self.custom_lexicon_check)
         self.custom_lexicon_row.set_activatable_widget(self.custom_lexicon_check)
@@ -3589,7 +3589,6 @@ class SettingsWindow(Adw.ApplicationWindow):
     # 页面上只放标题和最多一行的副标题。说明、注意事项、例子、来源、许可这类放进 ⓘ：
     #   组：group.set_header_suffix(self.info_button("…", [("项目主页", url)]))，ⓘ 在组标题右边
     #   行：self.add_info(row, "…")，ⓘ 在开关、下拉框前面（ActionRow、SwitchRow、ComboRow、ExpanderRow 都行）
-    # macOS 设置窗口对应的是 InfoButton 和各行的 info:（macos/Sources/App/SettingsView.swift）。
 
     def info_button(self, text, links=()):
         """ⓘ 小按钮，点开弹出说明；links 是 [(文字, 网址)…]，放在说明下面。
@@ -3997,7 +3996,7 @@ class SettingsWindow(Adw.ApplicationWindow):
             return
         want_model, want_llama, size = self.local_missing()
         if not want_model or os.path.exists(local_model_path(self.values) + ".part"):
-            # 只差 llama-server，或者模型下到一半（开始下时已经同意过许可）：不用再确认，接着下（和 macOS 一样）
+            # 只差 llama-server，或者模型下到一半（开始下时已经同意过许可）：不用再确认，接着下
             self.start_local_download()
             return
         extra = ("同时下载运行模型的程序 llama-server（llama.cpp 官方发布，MIT 许可）。"
@@ -4019,7 +4018,7 @@ class SettingsWindow(Adw.ApplicationWindow):
     def start_local_download(self):
         """把还差的都下了：模型，和系统里没有时的 llama-server。进度都显示在「翻译模型」那一行。
 
-        模型下到现在用的位置：设置里写了 TranslateLocalModel 就下到那里，没写下到 models/（和 macOS 一样），
+        模型下到现在用的位置：设置里写了 TranslateLocalModel 就下到那里，没写下到 models/，
         下完就能用，不会出现下好了却还显示缺模型。"""
         dest = local_model_path(self.values)
         want_model, want_llama, _size = self.local_missing()

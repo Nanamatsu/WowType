@@ -1,5 +1,5 @@
 //! 输入会话的按键测试：从 fcitx5-addon/test/key_harness.cpp 搬过来的用例，
-//! 用纯 Rust 驱动 [`wowtype_core::session::Session`]，macOS 的 CI 也跑。
+//! 用纯 Rust 驱动 [`wowtype_core::session::Session`]，在 Linux CI 中运行。
 //!
 //! 只搬已经挪进会话的行为：编辑区、已选词栈、退格、Esc，候选列表（引擎候选、计算器、
 //! emoji 推荐、数字按键 emoji、日期时间）、编辑区分音节，选词、整句上屏和学习，
