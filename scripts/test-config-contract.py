@@ -5,7 +5,7 @@
   python3 scripts/test-config-contract.py --fcitx5 <wowtype-config-dump>    # 再对照 fcitx5 插件
 
 wowtype-config-dump 是 scripts/addon-test.sh 编出来的（fcitx5-addon/test/config_dump.cpp），导出插件里
-WowtypeConfig 的键、类型、默认值、范围、可选值。macOS 那端在 macos/test.sh 里对照同一份规格。
+WowtypeConfig 的键、类型、默认值、范围、可选值。
 
 设置界面（settings/wowtype-config）没有 .py 后缀，用 importlib 按路径导入。不用装 GTK：导入前塞一个假的 gi，
 它在模块顶层只用到 gi.require_version 和 Adw 的两个基类。XDG 目录都指到临时目录，不碰自己的配置。
@@ -28,7 +28,7 @@ import types
 ROOT = Path(__file__).resolve().parents[1]
 SPEC_DIR = ROOT / "spec"
 SETTINGS = ROOT / "settings" / "wowtype-config"
-ENDS = ("fcitx5", "settings", "macos")
+ENDS = ("fcitx5", "settings")
 TYPES = ("bool", "int", "enum", "string", "key")
 # fcitx5 配置说明里的类型名
 FCITX_TYPES = {"Boolean": "bool", "Integer": "int", "Enum": "enum", "String": "string", "Key": "key"}
@@ -127,7 +127,7 @@ def check_spec(spec, pack):
     for case in spec["readRules"]["cases"]["items"]:
         for key in case["expect"]:
             check(key in by_key and set(by_key[key]["platforms"]) == set(ENDS),
-                  f"规格：readRules.cases 用的 {key} 不是三端都有的键")
+                  f"规格：readRules.cases 用的 {key} 不是 Linux 两端都有的键")
     policy = spec["readRules"]["outOfRange"]
     for end in ENDS:
         check(policy.get(end) in ("default", "keep", "clamp"), f"规格：readRules.outOfRange 没写 {end} 或写错了",

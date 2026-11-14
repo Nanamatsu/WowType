@@ -1,12 +1,11 @@
 {
   "$comment": [
     "可选词库包（万象拼音）的规矩。CI 用 scripts/make-wanxiang.sh 打包放到 Release 上，用户在设置里下载切换。",
-    "改这些规矩要先改这里，两端的测试拿它对照：",
+    "改这些规矩要先改这里，设置界面的测试拿它对照：",
     "  settings settings/wowtype-config 的 WANXIANG_ASSET、LEXICON_PACK_FILES、LEXICON_PACK_MIN、find_lexicon_asset、",
     "           download_updates（SHA256SUMS）、install_lexicon_pack、lexicon_pack_version（scripts/test-config-contract.py）",
-    "  macos    macos/Sources/Shared/LexiconPack.swift（macos/test.sh）",
     "fcitx5 插件不管词库包，只读 wowtype.conf 里的 Lexicon 路径。",
-    "cases 是两端都要跑一遍的例子，结果要和这里写的一样。"
+    "cases 是设置界面要跑的例子，结果要和这里写的一样。"
   ],
   "version": 1,
   "name": "wanxiang",

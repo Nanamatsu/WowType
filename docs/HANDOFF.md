@@ -9,7 +9,7 @@
 
 - 引擎：Rust，`core/`，提供 C ABI
 - 插件：C++，`fcitx5-addon/`，调 C ABI
-- 语音：Rust，`voice/` + `voice-daemon/`（X11 热键 + 麦克风 + 识别器）；内置微信离线识别（`voice/src/wtlocal/`），约 100MB 的模型由用户在设置的「语音」页下载（插件不自己下载）
+- 语音：Rust，`voice/` + `voice-daemon/`（Linux 热键 + 麦克风 + 识别器）；内置离线识别（`voice/src/wtlocal/`），模型由用户在设置的「语音」页下载（插件不自己下载）
 - 数据：开源词库（rime-ice），仓库自带简繁表
 
 ## 最短上手（5 条）
@@ -43,7 +43,7 @@ scripts/addon-test.sh /tmp/lexicon.tsv  # 单独跑按键测试（私有 fcitx5 
 
 ### 2. 语音的 X11 热键与采集
 
-`voice-daemon/src/linux.rs` 是 `cfg(target_os = "linux")`，我这边（macOS）根本不编译它。
+`voice-daemon/src/linux.rs` 是 `cfg(target_os = "linux")`。
 
 ```bash
 cargo build -p wowtype-voiced        # 先看能不能编过
