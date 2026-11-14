@@ -58,6 +58,34 @@ STATE_FILE = os.path.join(STATE_DIR, "state.json")
 TRANSLATE_KEY_FILE = os.environ.get("WOWTYPE_TRANSLATE_KEY_FILE") or os.path.join(
     _xdg("XDG_CONFIG_HOME", "~/.config"), "wowtype", "translate.key")
 ISSUES_URL = f"{HOMEPAGE}/issues/new"
+
+# 上游地址：仓库下架、换了镜像，或者想指着自己的存档时，写
+#   ~/.config/wowtype/upstream.json
+# 内容 {"homepage": "...", "install_guide": "...", "issues": "...", "repo": "owner/repo",
+#       "api": "<最新版本的 JSON 地址>", "page": "<发布页地址>"}；没写的项还是用 GitHub 原地址。
+# 想临时换文件用 WOWTYPE_UPSTREAM_JSON；单项也能用环境变量压过（WOWTYPE_UPSTREAM_API 等）。
+# 地址可以是 file:// 或者本地路径，设置界面的「检查更新」会照常读、照常下载。
+UPSTREAM_FILE = os.environ.get("WOWTYPE_UPSTREAM_JSON") or os.path.join(
+    _xdg("XDG_CONFIG_HOME", "~/.config"), "wowtype", "upstream.json")
+
+
+def _upstream():
+    try:
+        with open(UPSTREAM_FILE, encoding="utf-8") as f:
+            data = json.load(f)
+        return data if isinstance(data, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def upstream(key, default=""):
+    return (os.environ.get(f"WOWTYPE_UPSTREAM_{key.upper()}")
+            or str(_upstream().get(key) or "") or default)
+
+
+HOMEPAGE = upstream("homepage", HOMEPAGE)
+INSTALL_GUIDE = upstream("install_guide", f"{HOMEPAGE}/blob/main/docs/INSTALL.md")
+ISSUES_URL = upstream("issues", f"{HOMEPAGE}/issues/new")
 # 界面上的中文标点要用简体中文字体画，见 SettingsApp.update_font_css；装了哪个用哪个
 CJK_SC_FONTS = ["Noto Sans CJK SC", "Source Han Sans SC", "Source Han Sans CN",
                 "WenQuanYi Micro Hei", "WenQuanYi Zen Hei", "Droid Sans Fallback"]
@@ -1358,9 +1386,9 @@ def export_diagnostics(path):
 
 # ---------------------------------------------------------------- 更新
 
-REPO = "Gloridust/WowType"
-RELEASE_API = f"https://api.github.com/repos/{REPO}/releases/latest"
-RELEASES_PAGE = f"{HOMEPAGE}/releases"
+REPO = upstream("repo", "Gloridust/WowType")
+RELEASE_API = upstream("api", f"https://api.github.com/repos/{REPO}/releases/latest")
+RELEASES_PAGE = upstream("page", f"{HOMEPAGE}/releases")
 CACHE_DIR = os.path.join(_xdg("XDG_CACHE_HOME", "~/.cache"), "wowtype")
 UPDATE_DIR = os.path.join(CACHE_DIR, "updates")
 UPDATE_STATE = os.path.join(CACHE_DIR, "update-check.json")
@@ -1495,8 +1523,15 @@ def install_commands(manager, paths):
     raise ValueError("这个系统请按安装说明手动更新")
 
 
+def _as_url(url):
+    """file:// 和本地路径都能当地址用（本机镜像），http(s) 原样返回。"""
+    if "://" in url:
+        return url
+    return "file://" + os.path.abspath(os.path.expanduser(url))
+
+
 def http_open(url, timeout=30):
-    request = urllib.request.Request(url, headers={
+    request = urllib.request.Request(_as_url(url), headers={
         "User-Agent": f"WowType-Updater/{current_version()}",
         "Accept": "application/vnd.github+json" if "api.github.com" in url else "*/*",
     })
@@ -1581,7 +1616,9 @@ def markdown_to_pango(md):
 
 
 def fetch_latest():
-    """GitHub 上最新的正式版：{tag, version, notes, url, assets: {文件名: 下载地址}}。"""
+    """更新源上最新的正式版：{tag, version, notes, url, assets: {文件名: 下载地址}}。
+
+    默认是 GitHub 的 api.github.com；配了上游文件或镜像地址时读那里（file:// 也认）。"""
     with http_open(RELEASE_API, timeout=20) as response:
         data = json.load(response)
     return {
@@ -2132,11 +2169,13 @@ def download_model(dest, url=None, sha256=None, progress=None, cancelled=None, t
 
     progress(已下载, 总大小) 时不时调一下；cancelled() 返回 True 时停下（.part 留着下次续）。
     校验不过就删掉 .part 抛 ValueError；网络出错抛 OSError。"""
-    url = url or LOCAL_MODEL_URL
+    url = _as_url(url or LOCAL_MODEL_URL)
     sha256 = (sha256 or LOCAL_MODEL_SHA256).lower()
     os.makedirs(os.path.dirname(dest), exist_ok=True)
     part = dest + ".part"
     have = os.path.getsize(part) if os.path.exists(part) else 0
+    if have and url.startswith("file://"):
+        have = 0  # 本地文件不支持 Range，从头写
     request = urllib.request.Request(url, headers={"User-Agent": f"WowType/{current_version()}"})
     if have:
         request.add_header("Range", f"bytes={have}-")
@@ -4487,7 +4526,7 @@ class SettingsWindow(Adw.ApplicationWindow):
         self.refresh_lexicon()
         if error:
             self.latest_row.set_title("检查更新失败")
-            self.latest_row.set_subtitle(GLib.markup_escape_text(f"连不上 GitHub：{error}"))
+            self.latest_row.set_subtitle(GLib.markup_escape_text(f"连不上更新源：{error}"))
             self.install_row.set_visible(False)
             return GLib.SOURCE_REMOVE
         state = read_update_state()

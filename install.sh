@@ -17,6 +17,8 @@
 # 环境变量：
 #   WOWTYPE_VERSION=v0.3.8   装指定版本（默认最新）
 #   WOWTYPE_REPO=owner/repo  指定发布仓库（默认 Gloridust/WowType）
+#   WOWTYPE_BASE_URL=地址    从别处取安装包（本机镜像、私有服务器），配着 latest-tag 用；
+#                            给了它就不问 GitHub 要版本号
 #   WOWTYPE_NO_IM_CONFIG=1   不改输入法框架
 #   WOWTYPE_NO_RESTART=1     不重启 fcitx5（之后自己重启或注销再登录，再到设置里添加 WowType）
 #   WOWTYPE_YES=1            不问，直接按默认做
@@ -50,6 +52,19 @@ fetch() { # <地址> <保存到>
 
 latest_tag() {
   local url
+  # 用本机镜像（WOWTYPE_BASE_URL）时，版本号从镜像的 latest-tag 读，不问 GitHub
+  if [[ -n "${WOWTYPE_BASE_URL:-}" ]]; then
+    local tagfile="${WOWTYPE_BASE_URL%/}/../latest-tag"
+    if command -v curl >/dev/null; then
+      url=$(curl -fsSL --retry 2 "$tagfile" 2>/dev/null) || url=""
+    else
+      url=$(wget -q -O - "$tagfile" 2>/dev/null) || url=""
+    fi
+    url=$(printf '%s' "$url" | head -1)
+    [[ "$url" =~ ^v?[0-9][a-zA-Z0-9._+~^-]*$ ]] || die "镜像里没有可用的 latest-tag（$tagfile）"
+    printf '%s\n' "$url"
+    return 0
+  fi
   if command -v curl >/dev/null; then
     url=$(curl -fsSLI -o /dev/null -w '%{url_effective}' "https://github.com/$REPO/releases/latest")
   else
